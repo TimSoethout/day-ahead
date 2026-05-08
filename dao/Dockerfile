@@ -16,7 +16,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   apt-get install -y --no-install-recommends pkgconf mariadb-client inotify-tools procps \
     gunicorn libmariadb3 libmariadb-dev postgresql-client sqlite3 libjpeg-dev libffi-dev \
     wget libnauty-dev coinor-libcgl-dev gcc g++ git \
-    python3 python3-pip python3-venv && \
+    python3 python3-dev python3-pip python3-venv && \
   rm -rf /var/lib/apt/lists/*
 
 # Copy software for add-on
