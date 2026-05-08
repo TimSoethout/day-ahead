@@ -2,7 +2,10 @@ ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
 ARG BUILD_ARCH
-ENV ENV_BUILD_ARCH=$BUILD_ARCH
+ENV BUILD_ARCH=$BUILD_ARCH
+ENV PYTHONPATH="/root:/root/dao:/root/dao/prog"
+ENV VIRTUAL_ENV=/root/dao/venv/day_ahead
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -10,11 +13,11 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   --mount=type=cache,target=/var/lib/apt,sharing=locked \
   apt-get update -y && \
-  apt-get upgrade -y && \
-  apt-get install -y pkgconf nano file mariadb-client inotify-tools procps \
+  apt-get install -y --no-install-recommends pkgconf mariadb-client inotify-tools procps \
     gunicorn libmariadb3 libmariadb-dev postgresql-client sqlite3 libjpeg-dev libffi-dev \
     wget libnauty-dev coinor-libcgl-dev gcc g++ git \
-    python3 python3-pip python3-venv
+    python3 python3-pip python3-venv && \
+  rm -rf /var/lib/apt/lists/*
 
 # Copy software for add-on
 RUN mkdir /root/dao
@@ -31,19 +34,12 @@ RUN printf  '__version__ ="%s"\n' "$DAO_VERSION" > /root/dao/prog/version.py
 
 
 WORKDIR /root/dao/prog
-RUN echo 'platform: "$ENV_BUILD_ARCH"' \
-  && export BUILD_ARCH="$ENV_BUILD_ARCH" \
-  && echo 'export BUILD_ARCH="$ENV_BUILD_ARCH"' >> ~/.bashrc \
-  && export PYTHONPATH="/root:/root/dao:/root/dao/prog" \
-  && echo 'export PYTHONPATH="/root:/root/dao:/root/dao/prog"' >> ~/.bashrc
-
-ENV VIRTUAL_ENV=/root/dao/venv/day_ahead
 RUN python3 -m venv $VIRTUAL_ENV
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-
-RUN pip3 install uv
-RUN if [ "x${BUILD_ARCH}" = "xaarch64" ]; then ln -s `which mariadb_config` /usr/local/bin/mariadb_config; fi
-RUN --mount=type=bind,target=/tmp uv pip install -r /tmp/requirements.txt
+RUN --mount=type=bind,target=/tmp \
+  pip install --no-cache-dir uv && \
+  if [ "x${BUILD_ARCH}" = "xaarch64" ]; then ln -sf "$(command -v mariadb_config)" /usr/local/bin/mariadb_config; fi && \
+  UV_NO_CACHE=1 uv pip install -r /tmp/requirements.txt && \
+  pip uninstall -y uv
 
 COPY run /root/dao/prog/
 
