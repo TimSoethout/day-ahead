@@ -36,7 +36,11 @@ WORKDIR /root/dao/prog
 RUN python3 -m venv $VIRTUAL_ENV
 RUN --mount=type=bind,target=/tmp \
   pip install --no-cache-dir uv && \
-  if [ "x${BUILD_ARCH}" = "xaarch64" ]; then mariadb_cfg="$(command -v mariadb_config)" && [ -n "$mariadb_cfg" ] || { echo "mariadb_config not found" >&2; exit 1; }; ln -s "$mariadb_cfg" /usr/local/bin/mariadb_config; fi && \
+  if [ "x${BUILD_ARCH}" = "xaarch64" ]; then \
+    mariadb_cfg="$(command -v mariadb_config)"; \
+    [ -n "$mariadb_cfg" ] || { echo "mariadb_config not found" >&2; exit 1; }; \
+    ln -s "$mariadb_cfg" /usr/local/bin/mariadb_config; \
+  fi && \
   TMPDIR=/var/tmp UV_NO_CACHE=1 uv pip install -r /tmp/requirements.txt && \
   pip uninstall -y uv
 
