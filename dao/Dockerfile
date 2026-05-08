@@ -2,7 +2,6 @@ ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
 ARG BUILD_ARCH
-ENV BUILD_ARCH=$BUILD_ARCH
 ENV PYTHONPATH="/root:/root/dao:/root/dao/prog"
 ENV VIRTUAL_ENV=/root/dao/venv/day_ahead
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
@@ -14,7 +13,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   --mount=type=cache,target=/var/lib/apt,sharing=locked \
   apt-get update -y && \
   apt-get install -y --no-install-recommends pkgconf mariadb-client inotify-tools procps \
-    gunicorn libmariadb3 libmariadb-dev postgresql-client sqlite3 libjpeg-dev libffi-dev \
+    libmariadb3 libmariadb-dev postgresql-client sqlite3 libjpeg-dev libffi-dev \
     wget libnauty-dev coinor-libcgl-dev gcc g++ git \
     python3 python3-dev python3-pip python3-venv && \
   rm -rf /var/lib/apt/lists/*
@@ -37,7 +36,7 @@ WORKDIR /root/dao/prog
 RUN python3 -m venv $VIRTUAL_ENV
 RUN --mount=type=bind,target=/tmp \
   pip install --no-cache-dir uv && \
-  if [ "x${BUILD_ARCH}" = "xaarch64" ]; then ln -sf "$(command -v mariadb_config)" /usr/local/bin/mariadb_config; fi && \
+  if [ "x${BUILD_ARCH}" = "xaarch64" ]; then mariadb_cfg="$(command -v mariadb_config)" && [ -n "$mariadb_cfg" ] || { echo "mariadb_config not found" >&2; exit 1; }; ln -s "$mariadb_cfg" /usr/local/bin/mariadb_config; fi && \
   TMPDIR=/var/tmp UV_NO_CACHE=1 uv pip install -r /tmp/requirements.txt && \
   pip uninstall -y uv
 
