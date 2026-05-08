@@ -38,7 +38,7 @@ RUN python3 -m venv $VIRTUAL_ENV
 RUN --mount=type=bind,target=/tmp \
   pip install --no-cache-dir uv && \
   if [ "x${BUILD_ARCH}" = "xaarch64" ]; then ln -sf "$(command -v mariadb_config)" /usr/local/bin/mariadb_config; fi && \
-  UV_NO_CACHE=1 uv pip install -r /tmp/requirements.txt && \
+  TMPDIR=/var/tmp UV_NO_CACHE=1 uv pip install -r /tmp/requirements.txt && \
   pip uninstall -y uv
 
 COPY run /root/dao/prog/
