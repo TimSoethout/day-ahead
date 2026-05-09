@@ -28,10 +28,10 @@ RUN python3 -m venv $VIRTUAL_ENV && \
   TMPDIR=/var/tmp UV_NO_CACHE=1 uv pip install -r /tmp/requirements.txt && \
   pip uninstall -y uv && \
   # XGBoost pulls optional CUDA/NCCL wheel artifacts; DAO runs CPU-only in HA.
-  rm -rf "$VIRTUAL_ENV/lib/python"*/site-packages/nvidia "$VIRTUAL_ENV/lib/python"*/site-packages/nvidia_nccl_cu12* && \
+  find "$VIRTUAL_ENV/lib/python"*/site-packages -maxdepth 1 -type d \( -name 'nvidia' -o -name 'nvidia_*' -o -name 'nvidia-*' \) -exec rm -rf {} + && \
   # MIP uses cbcbox; keep generic/avx2 solver binaries and drop debug-only build.
   rm -rf "$VIRTUAL_ENV/lib/python"*/site-packages/cbcbox/cbc_dist_debug* && \
-  find "$VIRTUAL_ENV/lib" -depth -type d -name __pycache__ -exec rm -rf {} + && \
+  find "$VIRTUAL_ENV/lib" -type d -name __pycache__ -prune -exec rm -rf {} + && \
   find "$VIRTUAL_ENV/lib" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
 
 FROM ${BUILD_FROM}
