@@ -31,7 +31,7 @@ RUN python3 -m venv $VIRTUAL_ENV && \
   rm -rf "$VIRTUAL_ENV/lib/python"*/site-packages/nvidia* && \
   # Keep generic/avx2 CBC binaries; drop debug distribution only.
   rm -rf "$VIRTUAL_ENV/lib/python"*/site-packages/cbcbox/cbc_dist_debug* && \
-  find "$VIRTUAL_ENV/lib" -type d \( -name tests -o -name test -o -name __pycache__ \) -prune -exec rm -rf {} + && \
+  find "$VIRTUAL_ENV/lib" -type d \( -name tests -o -name test -o -name __pycache__ \) -exec rm -rf {} + && \
   find "$VIRTUAL_ENV/lib" -type f \( -name '*.pyc' -o -name '*.pyo' -o -name '*.a' \) -delete
 
 FROM ${BUILD_FROM}
@@ -47,9 +47,11 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN if command -v apt-get >/dev/null 2>&1; then \
     apt-get update -y && \
+    # DB drivers are Python wheels; only runtime python + inotify are required.
     apt-get install -y --no-install-recommends inotify-tools python3 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*; \
   elif command -v apk >/dev/null 2>&1; then \
+    # DB drivers are Python wheels; only runtime python + inotify are required.
     apk add --no-cache inotify-tools python3; \
   else \
     echo "Unsupported package manager in base image" >&2; \
