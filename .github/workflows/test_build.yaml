@@ -26,7 +26,7 @@ jobs:
 
       - name: Prepare build
         run: |
-          cp -a dao/* ./release-${{ matrix.release }}
+          cp -a dao/. ./release-${{ matrix.release }}
 
       - name: Test build 
         uses: home-assistant/builder@2026.02.1
@@ -40,3 +40,45 @@ jobs:
             --target release-${{ matrix.release }} \
             --version "test" \
             --addon
+
+      - name: Validate add-on image metadata and size
+        env:
+          MAX_IMAGE_SIZE_BYTES: ${{ vars.DAO_MAX_IMAGE_SIZE_BYTES }}
+        run: |
+          set -euo pipefail
+          IMAGE_ID="$(docker image ls --quiet \
+            --filter "label=io.hass.arch=${{ matrix.arch }}" \
+            --filter "label=io.hass.version=test" | head -n1)"
+          if [[ -z "${IMAGE_ID}" ]]; then
+            echo "No image found by expected labels; available images:"
+            docker image ls
+            exit 1
+          fi
+
+          HASS_TYPE="$(docker image inspect "${IMAGE_ID}" --format '{{index .Config.Labels "io.hass.type"}}')"
+          if [[ "${HASS_TYPE}" != "addon" ]]; then
+            echo "Invalid io.hass.type label: ${HASS_TYPE}"
+            exit 1
+          fi
+
+          ENTRYPOINT="$(docker image inspect "${IMAGE_ID}" --format '{{json .Config.Entrypoint}}')"
+          if [[ "${ENTRYPOINT}" != *"run.sh"* ]]; then
+            echo "Unexpected entrypoint: ${ENTRYPOINT}"
+            exit 1
+          fi
+
+          SIZE_BYTES="$(docker image inspect "${IMAGE_ID}" --format '{{.Size}}')"
+          SIZE_MIB="$((SIZE_BYTES / 1024 / 1024))"
+          echo "release=${{ matrix.release }} arch=${{ matrix.arch }} image_id=${IMAGE_ID} size_bytes=${SIZE_BYTES} size_mib=${SIZE_MIB}"
+          {
+            echo "### Image size"
+            echo "- Release: \`${{ matrix.release }}\`"
+            echo "- Arch: \`${{ matrix.arch }}\`"
+            echo "- Image ID: \`${IMAGE_ID}\`"
+            echo "- Size: \`${SIZE_BYTES}\` bytes (~${SIZE_MIB} MiB)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "${MAX_IMAGE_SIZE_BYTES:-}" =~ ^[1-9][0-9]*$ ]] && (( SIZE_BYTES > MAX_IMAGE_SIZE_BYTES )); then
+            echo "Image size ${SIZE_BYTES} exceeds configured max ${MAX_IMAGE_SIZE_BYTES} bytes"
+            exit 1
+          fi
