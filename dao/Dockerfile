@@ -12,7 +12,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   --mount=type=cache,target=/var/lib/apt,sharing=locked \
   apt-get update -y && \
   apt-get install -y --no-install-recommends pkgconf libmariadb-dev gcc g++ \
-    python3 python3-dev python3-pip python3-venv
+    python3 python3-dev python3-pip python3-venv && \
+  apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /tmp/requirements.txt
 RUN python3 -m venv $VIRTUAL_ENV && \
@@ -39,7 +40,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   --mount=type=cache,target=/var/lib/apt,sharing=locked \
   apt-get update -y && \
   apt-get install -y --no-install-recommends mariadb-client inotify-tools procps \
-    libmariadb3 postgresql-client sqlite3 python3 python3-venv
+    libmariadb3 postgresql-client sqlite3 python3 python3-venv && \
+  apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy software for add-on
 RUN mkdir /root/dao
