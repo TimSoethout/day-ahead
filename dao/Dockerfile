@@ -12,11 +12,11 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN if command -v apt-get >/dev/null 2>&1; then \
     apt-get update -y && \
     apt-get install -y --no-install-recommends \
-      binutils gcc g++ pkgconf python3 python3-dev python3-pip python3-venv && \
+      gcc g++ pkgconf python3 python3-dev python3-pip python3-venv && \
     apt-get clean && rm -rf /var/lib/apt/lists/*; \
   elif command -v apk >/dev/null 2>&1; then \
     apk add --no-cache \
-      binutils build-base pkgconf python3 python3-dev py3-pip py3-virtualenv; \
+      build-base pkgconf python3 python3-dev py3-pip py3-virtualenv; \
   else \
     echo "Unsupported package manager in base image" >&2; \
     exit 1; \
@@ -27,7 +27,9 @@ RUN python3 -m venv $VIRTUAL_ENV && \
   pip install --no-cache-dir uv && \
   TMPDIR=/var/tmp UV_NO_CACHE=1 uv pip install -r /tmp/requirements.txt && \
   pip uninstall -y uv pip setuptools wheel && \
+  # Keep CPU-only runtime artifacts to reduce image size.
   rm -rf "$VIRTUAL_ENV/lib/python"*/site-packages/nvidia* && \
+  # Keep generic/avx2 CBC binaries; drop debug distribution only.
   rm -rf "$VIRTUAL_ENV/lib/python"*/site-packages/cbcbox/cbc_dist_debug* && \
   find "$VIRTUAL_ENV/lib" -type d \( -name tests -o -name test -o -name __pycache__ \) -prune -exec rm -rf {} + && \
   find "$VIRTUAL_ENV/lib" -type f \( -name '*.pyc' -o -name '*.pyo' -o -name '*.a' \) -delete
