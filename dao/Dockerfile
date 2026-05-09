@@ -4,27 +4,33 @@ FROM ${BUILD_FROM} AS builder
 ARG BUILD_ARCH
 ENV VIRTUAL_ENV=/root/dao/venv/day_ahead
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+ENV PYTHONDONTWRITEBYTECODE=1
 
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-  --mount=type=cache,target=/var/lib/apt,sharing=locked \
-  apt-get update -y && \
-  apt-get install -y --no-install-recommends pkgconf libmariadb-dev gcc g++ \
-    python3 python3-dev python3-pip python3-venv && \
-  apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN if command -v apt-get >/dev/null 2>&1; then \
+    apt-get update -y && \
+    apt-get install -y --no-install-recommends \
+      binutils gcc g++ pkgconf python3 python3-dev python3-pip python3-venv && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*; \
+  elif command -v apk >/dev/null 2>&1; then \
+    apk add --no-cache \
+      binutils build-base pkgconf python3 python3-dev py3-pip py3-virtualenv; \
+  else \
+    echo "Unsupported package manager in base image" >&2; \
+    exit 1; \
+  fi
 
 COPY requirements.txt /tmp/requirements.txt
 RUN python3 -m venv $VIRTUAL_ENV && \
   pip install --no-cache-dir uv && \
-  if [ "x${BUILD_ARCH}" = "xaarch64" ]; then \
-    mariadb_cfg="$(command -v mariadb_config)"; \
-    [ -n "$mariadb_cfg" ] || { echo "mariadb_config not found" >&2; exit 1; }; \
-    ln -s "$mariadb_cfg" /usr/local/bin/mariadb_config; \
-  fi && \
   TMPDIR=/var/tmp UV_NO_CACHE=1 uv pip install -r /tmp/requirements.txt && \
-  pip uninstall -y uv
+  pip uninstall -y uv pip setuptools wheel && \
+  rm -rf "$VIRTUAL_ENV/lib/python"*/site-packages/nvidia* && \
+  rm -rf "$VIRTUAL_ENV/lib/python"*/site-packages/cbcbox/cbc_dist_debug* && \
+  find "$VIRTUAL_ENV/lib" -type d \( -name tests -o -name test -o -name __pycache__ \) -prune -exec rm -rf {} + && \
+  find "$VIRTUAL_ENV/lib" -type f \( -name '*.pyc' -o -name '*.pyo' -o -name '*.a' \) -delete
 
 FROM ${BUILD_FROM}
 
@@ -32,16 +38,21 @@ ARG BUILD_ARCH
 ENV PYTHONPATH="/root:/root/dao:/root/dao/prog"
 ENV VIRTUAL_ENV=/root/dao/venv/day_ahead
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+ENV PYTHONDONTWRITEBYTECODE=1
 
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-  --mount=type=cache,target=/var/lib/apt,sharing=locked \
-  apt-get update -y && \
-  apt-get install -y --no-install-recommends mariadb-client inotify-tools procps \
-    libmariadb3 postgresql-client sqlite3 python3 python3-venv && \
-  apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN if command -v apt-get >/dev/null 2>&1; then \
+    apt-get update -y && \
+    apt-get install -y --no-install-recommends inotify-tools python3 && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*; \
+  elif command -v apk >/dev/null 2>&1; then \
+    apk add --no-cache inotify-tools python3; \
+  else \
+    echo "Unsupported package manager in base image" >&2; \
+    exit 1; \
+  fi
 
 # Copy software for add-on
 RUN mkdir /root/dao
