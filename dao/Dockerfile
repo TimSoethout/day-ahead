@@ -28,10 +28,10 @@ RUN python3 -m venv $VIRTUAL_ENV && \
   TMPDIR=/var/tmp UV_NO_CACHE=1 uv pip install -r /tmp/requirements.txt && \
   pip uninstall -y uv && \
   # Remove GPU-specific artifacts to reduce image size.
-  rm -rf "$VIRTUAL_ENV/lib/python"*/site-packages/nvidia* && \
+  rm -rf "$VIRTUAL_ENV/lib/python"*/site-packages/nvidia "$VIRTUAL_ENV/lib/python"*/site-packages/nvidia_nccl_cu12* && \
   # Keep generic/avx2 CBC binaries; drop debug distribution only.
   rm -rf "$VIRTUAL_ENV/lib/python"*/site-packages/cbcbox/cbc_dist_debug* && \
-  find "$VIRTUAL_ENV/lib" -depth -type d \( -name tests -o -name test -o -name __pycache__ \) -exec rm -rf {} + && \
+  find "$VIRTUAL_ENV/lib" -depth -type d -name __pycache__ -exec rm -rf {} + && \
   find "$VIRTUAL_ENV/lib" -type f \( -name '*.pyc' -o -name '*.pyo' -o -name '*.a' \) -delete
 
 FROM ${BUILD_FROM}
