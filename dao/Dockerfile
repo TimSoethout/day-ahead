@@ -26,7 +26,9 @@ RUN if command -v apt-get >/dev/null 2>&1; then \
 
 COPY requirements.txt /tmp/requirements.txt
 RUN python3 -m venv $VIRTUAL_ENV && \
-  python -m pip install --no-cache-dir -r /tmp/requirements.txt && \
+  python -m pip install --no-cache-dir uv && \
+  TMPDIR=/var/tmp UV_NO_CACHE=1 uv pip install --index-strategy unsafe-best-match -r /tmp/requirements.txt && \
+  python -m pip uninstall -y uv && \
   rm -rf /root/.cache /var/tmp/* /tmp/* && \
   # XGBoost pulls optional CUDA/NCCL wheel artifacts; DAO runs CPU-only in HA.
   find "$VIRTUAL_ENV/lib/python"*/site-packages -maxdepth 1 -type d \( -name 'nvidia' -o -name 'nvidia_*' -o -name 'nvidia-*' \) -exec rm -rf {} + && \
