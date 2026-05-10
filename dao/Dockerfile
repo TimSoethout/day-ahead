@@ -27,7 +27,7 @@ RUN if command -v apt-get >/dev/null 2>&1; then \
 COPY requirements.txt /tmp/requirements.txt
 RUN python3 -m venv $VIRTUAL_ENV && \
   python -m pip install --no-cache-dir uv && \
-  awk '!/^[[:space:]]*mip==/' /tmp/requirements.txt > /tmp/requirements-uv.txt && \
+  awk '!/^[[:space:]]*mip[[:space:]]*==/' /tmp/requirements.txt > /tmp/requirements-uv.txt && \
   printf 'nvidia-nccl-cu12\n' > /tmp/uv-excludes.txt && \
   TMPDIR=/var/tmp UV_NO_CACHE=1 uv pip install \
     --index-strategy unsafe-best-match \
