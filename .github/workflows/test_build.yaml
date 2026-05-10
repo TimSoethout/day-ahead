@@ -26,7 +26,7 @@ jobs:
 
       - name: Prepare build
         run: |
-          cp -a dao/* ./release-${{ matrix.release }}
+          cp -a dao/. ./release-${{ matrix.release }}
 
       - name: Test build 
         uses: home-assistant/builder@2026.02.1
