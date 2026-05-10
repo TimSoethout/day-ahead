@@ -27,6 +27,7 @@ RUN if command -v apt-get >/dev/null 2>&1; then \
 COPY requirements.txt /tmp/requirements.txt
 RUN python3 -m venv $VIRTUAL_ENV && \
   python -m pip install --no-cache-dir uv && \
+  # Install mip separately so uv can resolve cbcbox using an explicit manylinux platform.
   awk '!/^[[:space:]]*mip[[:space:]]*==/' /tmp/requirements.txt > /tmp/requirements-uv.txt && \
   printf 'nvidia-nccl-cu12\n' > /tmp/uv-excludes.txt && \
   TMPDIR=/var/tmp UV_NO_CACHE=1 uv pip install \
@@ -36,6 +37,7 @@ RUN python3 -m venv $VIRTUAL_ENV && \
   if [[ "$BUILD_ARCH" == "amd64" ]]; then UV_PLATFORM="x86_64-manylinux2014"; \
   elif [[ "$BUILD_ARCH" == "aarch64" ]]; then UV_PLATFORM="aarch64-manylinux2014"; \
   else UV_PLATFORM="x86_64-unknown-linux-musl"; fi && \
+  # Keep mip pinned to requirements.txt version while forcing platform for cbcbox resolution.
   TMPDIR=/var/tmp UV_NO_CACHE=1 uv pip install \
     --index-strategy unsafe-best-match \
     --python-platform "$UV_PLATFORM" \
