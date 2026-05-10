@@ -14,11 +14,11 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN if command -v apt-get >/dev/null 2>&1; then \
     apt-get update -y && \
     apt-get install -y --no-install-recommends \
-      gcc g++ pkgconf python3 python3-dev python3-pip python3-venv && \
+      cmake gcc g++ linux-libc-dev pkgconf python3 python3-dev python3-pip python3-venv && \
     apt-get clean && rm -rf /var/lib/apt/lists/*; \
   elif command -v apk >/dev/null 2>&1; then \
     apk add --no-cache \
-      build-base pkgconf python3 python3-dev py3-pip py3-virtualenv; \
+      build-base cmake linux-headers pkgconf python3 python3-dev py3-pip py3-virtualenv; \
   else \
     echo "Unsupported package manager in base image" >&2; \
     exit 1; \
@@ -27,7 +27,19 @@ RUN if command -v apt-get >/dev/null 2>&1; then \
 COPY requirements.txt /tmp/requirements.txt
 RUN python3 -m venv $VIRTUAL_ENV && \
   python -m pip install --no-cache-dir uv && \
-  TMPDIR=/var/tmp UV_NO_CACHE=1 uv pip install --index-strategy unsafe-best-match -r /tmp/requirements.txt && \
+  awk '!/^[[:space:]]*mip==/' /tmp/requirements.txt > /tmp/requirements-uv.txt && \
+  printf 'nvidia-nccl-cu12\n' > /tmp/uv-excludes.txt && \
+  TMPDIR=/var/tmp UV_NO_CACHE=1 uv pip install \
+    --index-strategy unsafe-best-match \
+    --excludes /tmp/uv-excludes.txt \
+    -r /tmp/requirements-uv.txt && \
+  if [[ "$BUILD_ARCH" == "amd64" ]]; then UV_PLATFORM="x86_64-manylinux2014"; \
+  elif [[ "$BUILD_ARCH" == "aarch64" ]]; then UV_PLATFORM="aarch64-manylinux2014"; \
+  else UV_PLATFORM="x86_64-unknown-linux-musl"; fi && \
+  TMPDIR=/var/tmp UV_NO_CACHE=1 uv pip install \
+    --index-strategy unsafe-best-match \
+    --python-platform "$UV_PLATFORM" \
+    mip==1.17.6 && \
   python -m pip uninstall -y uv && \
   rm -rf /root/.cache /var/tmp/* /tmp/* && \
   # XGBoost pulls optional CUDA/NCCL wheel artifacts; DAO runs CPU-only in HA.
