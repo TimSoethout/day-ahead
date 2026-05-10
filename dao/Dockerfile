@@ -36,12 +36,13 @@ RUN python3 -m venv $VIRTUAL_ENV && \
     -r /tmp/requirements-uv.txt && \
   if [[ "$BUILD_ARCH" == "amd64" ]]; then UV_PLATFORM="x86_64-manylinux2014"; \
   elif [[ "$BUILD_ARCH" == "aarch64" ]]; then UV_PLATFORM="aarch64-manylinux2014"; \
-  else UV_PLATFORM="x86_64-unknown-linux-musl"; fi && \
+  else echo "Unsupported BUILD_ARCH for mip install: $BUILD_ARCH" >&2; exit 1; fi && \
   # Keep mip pinned to requirements.txt version while forcing platform for cbcbox resolution.
+  MIP_SPEC="$(grep -E '^[[:space:]]*mip[[:space:]]*==' /tmp/requirements.txt | head -n1 | tr -d '[:space:]')" && \
   TMPDIR=/var/tmp UV_NO_CACHE=1 uv pip install \
     --index-strategy unsafe-best-match \
     --python-platform "$UV_PLATFORM" \
-    mip==1.17.6 && \
+    "$MIP_SPEC" && \
   python -m pip uninstall -y uv && \
   rm -rf /root/.cache /var/tmp/* /tmp/* && \
   # XGBoost pulls optional CUDA/NCCL wheel artifacts; DAO runs CPU-only in HA.
